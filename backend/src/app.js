@@ -81,15 +81,27 @@ app.get('/favicon.ico', (req, res) => {
 });
 
 // Configuração CORS atualizada para aceitar múltiplas origens
+const corsOriginEnv = process.env.CORS_ORIGIN || '';
+
+// Origens padrão mais as especificadas por CORS_ORIGIN
 const allowedOrigins = [
-  'https://speedfunnels.marcussviniciusa.cloud',
-  'https://www.speedfunnels.marcussviniciusa.cloud',
-  'https://api.speedfunnels.marcussviniciusa.cloud',
-  'https://apispeedfunnels.marcussviniciusa.cloud',
-  'https://apispeed.marcussviniciusa.cloud',
+  'https://speedfunnels.online',
+  'https://www.speedfunnels.online',
+  'https://api.speedfunnels.online',
+  'https://app.speedfunnels.online',
   'http://localhost:3000',
   'http://localhost:8080'
 ];
+
+// Adiciona origens da variável de ambiente se existirem
+if (corsOriginEnv) {
+  const corsOrigins = corsOriginEnv.split(',');
+  corsOrigins.forEach(origin => {
+    if (origin && !allowedOrigins.includes(origin)) {
+      allowedOrigins.push(origin.trim());
+    }
+  });
+}
 
 app.use(cors({
   origin: function (origin, callback) {

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Usar a URL da API configurada no ambiente ou o domínio principal do projeto
-const API_URL = process.env.REACT_APP_API_URL || 'https://apispeed.marcussviniciusa.cloud/api';
+const API_URL = process.env.REACT_APP_API_URL || 'https://api.speedfunnels.online/api';
 
 // Create axios instance with base URL
 const api = axios.create({

@@ -1,0 +1,152 @@
+version: '3.8'
+
+services:
+  # Serviço Backend (API)
+  api:
+    image: marcussviniciusa/meta-ads-backend:v1.0.46
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      JWT_SECRET: 45aab33419d55426e0276078dd8b16eac990c163afab0f20645d976cd92c80eb96
+      JWT_EXPIRATION: 86400
+      # Configurações de domínio
+      CORS_ORIGIN: https://app.speedfunnels.online,https://speedfunnels.online
+      FRONTEND_URL: https://app.speedfunnels.online
+      # PostgreSQL (instalado na VPS)
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: meta_ads
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 4f4f49cc55e4ba2667873c2e8e97e1d6
+      # Redis (instalado na VPS)
+      REDIS_HOST: 77.37.41.106
+      REDIS_PORT: 6380
+      REDIS_PASSWORD: Marcus1911Marcus
+      # Meta/Facebook
+      FACEBOOK_APP_ID: 4190441111244279
+      FACEBOOK_APP_SECRET: 8ef5ee9f87897877584e8c7f27a2171c
+      META_APP_ID: 4190441111244279
+      META_APP_SECRET: 8ef5ee9f87897877584e8c7f27a2171c
+      # Google
+      GOOGLE_CLIENT_ID: 446046495796-ondcr66o2bq9toipem4n8oi9nv1rtua7.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: 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
+      # Admin
+      SUPER_ADMIN_EMAIL: admin@speedfunnels.marcussviniciusa.cloud
+      SUPER_ADMIN_PASSWORD: Admin2025!
+      MIGRATION_SECRET_KEY: speedfunnels_migration_2025
+      # Domínios
+      API_DOMAIN: api.speedfunnels.online
+      BASE_DOMAIN: speedfunnels.online
+      APP_DOMAIN: app.speedfunnels.online
+      ALLOWED_ORIGINS: "https://app.speedfunnels.online,https://speedfunnels.online,https://api.speedfunnels.online,http://localhost:3000"
+    networks:
+      - SpeedFunnelsNet
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=SpeedFunnelsNet"
+        - "traefik.http.routers.api-speedfunnels.rule=Host(`api.speedfunnels.online`)"
+        - "traefik.http.routers.api-speedfunnels.entrypoints=websecure"
+        - "traefik.http.routers.api-speedfunnels.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.api-speedfunnels.loadbalancer.server.port=8080"
+        # Configurar middleware para redirecionar todas as requisições para o backend
+        - "traefik.http.middlewares.api-stripprefix.stripprefix.prefixes=/"
+        # Adicionar redirecionamento para rotas do Express/Node.js
+        - "traefik.http.routers.api-speedfunnels.middlewares=api-stripprefix,api-speedfunnels-cors,api-speedfunnels-sec-headers"
+        # Rota específica para a raiz
+        - "traefik.http.routers.api-root.rule=Host(`api.speedfunnels.online`) && Path(`/`)"
+        - "traefik.http.routers.api-root.entrypoints=websecure"
+        - "traefik.http.routers.api-root.tls.certresolver=letsencryptresolver"
+        - "traefik.http.routers.api-root.middlewares=api-speedfunnels-cors,api-speedfunnels-sec-headers"
+        - "traefik.http.routers.api-root.service=api-speedfunnels"
+        # CORS e headers de segurança
+        - "traefik.http.middlewares.api-speedfunnels-cors.headers.accesscontrolallowmethods=GET,OPTIONS,PUT,POST,DELETE"
+        - "traefik.http.middlewares.api-speedfunnels-cors.headers.accesscontrolallowheaders=Origin,X-Requested-With,Content-Type,Accept,Authorization,X-Migration-Key"
+        - "traefik.http.middlewares.api-speedfunnels-cors.headers.accesscontrolalloworiginlist=https://app.speedfunnels.online,https://speedfunnels.online,http://localhost:3000"
+        - "traefik.http.middlewares.api-speedfunnels-cors.headers.accesscontrolmaxage=86400"
+        - "traefik.http.middlewares.api-speedfunnels-cors.headers.addvaryheader=true"
+        - "traefik.http.middlewares.api-speedfunnels-cors.headers.accesscontrolallowcredentials=true"
+        - "traefik.http.middlewares.api-speedfunnels-cors.headers.accesscontrolexposeheaders=Content-Length,Content-Type"
+        - "traefik.http.middlewares.api-speedfunnels-sec-headers.headers.customresponseheaders.Cross-Origin-Resource-Policy=cross-origin"
+        - "traefik.http.middlewares.api-speedfunnels-sec-headers.headers.customresponseheaders.Cross-Origin-Embedder-Policy=require-corp"
+        - "traefik.http.middlewares.api-speedfunnels-sec-headers.headers.customresponseheaders.Cross-Origin-Opener-Policy=same-origin-allow-popups"
+        - "traefik.http.routers.api-speedfunnels.middlewares=api-speedfunnels-cors,api-speedfunnels-sec-headers"
+
+  # Serviço Frontend (já usa nginx internamente para servir os arquivos estáticos)
+  frontend:
+    image: marcussviniciusa/meta-ads-frontend:v1.0.48
+    depends_on:
+      - api
+    networks:
+      - SpeedFunnelsNet
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=SpeedFunnelsNet"
+        - "traefik.http.routers.frontend-speedfunnels.rule=Host(`app.speedfunnels.online`)"
+        - "traefik.http.routers.frontend-speedfunnels.entrypoints=websecure"
+        - "traefik.http.routers.frontend-speedfunnels.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.frontend-speedfunnels.loadbalancer.server.port=80"
+        # Adicionar regra específica para o path raiz e caminhos secundários
+        - "traefik.http.routers.frontend-root.rule=Host(`app.speedfunnels.online`) && Path(`/`)"
+        - "traefik.http.routers.frontend-root.entrypoints=websecure"
+        - "traefik.http.routers.frontend-root.tls.certresolver=letsencryptresolver"
+        - "traefik.http.routers.frontend-root.middlewares=spa-middleware,security-headers"
+        - "traefik.http.routers.frontend-root.service=frontend-speedfunnels"
+        # Middleware para SPA e headers de segurança
+        - "traefik.http.middlewares.spa-middleware.headers.customResponseHeaders.Cache-Control=no-store"
+        - "traefik.http.middlewares.spa-middleware.headers.customResponseHeaders.Pragma=no-cache"
+        - "traefik.http.middlewares.mime-types.headers.customResponseHeaders.Content-Type-Options="
+        - "traefik.http.middlewares.mime-types.headers.customResponseHeaders.X-Content-Type-Options="
+        - "traefik.http.middlewares.security-headers.headers.forcestsheader=true"
+        - "traefik.http.middlewares.security-headers.headers.stsincludesubdomains=true"
+        - "traefik.http.middlewares.security-headers.headers.stsseconds=31536000"
+        - "traefik.http.routers.frontend-speedfunnels.middlewares=spa-middleware,security-headers,mime-types"
+        - "traefik.http.routers.frontend-root.middlewares=spa-middleware,security-headers,mime-types"
+        # Rota específica para arquivos estáticos JS
+        - "traefik.http.routers.frontend-js.rule=Host(`app.speedfunnels.online`) && PathPrefix(`/static/js`)"
+        - "traefik.http.routers.frontend-js.entrypoints=websecure"
+        - "traefik.http.routers.frontend-js.tls.certresolver=letsencryptresolver"
+        - "traefik.http.routers.frontend-js.service=frontend-speedfunnels"
+        - "traefik.http.routers.frontend-js.middlewares=js-mime-type,security-headers"
+        - "traefik.http.middlewares.js-mime-type.headers.customResponseHeaders.Content-Type=application/javascript"
+        # Rota específica para arquivos estáticos CSS
+        - "traefik.http.routers.frontend-css.rule=Host(`app.speedfunnels.online`) && PathPrefix(`/static/css`)"
+        - "traefik.http.routers.frontend-css.entrypoints=websecure"
+        - "traefik.http.routers.frontend-css.tls.certresolver=letsencryptresolver"
+        - "traefik.http.routers.frontend-css.service=frontend-speedfunnels"
+        - "traefik.http.routers.frontend-css.middlewares=css-mime-type,security-headers"
+        - "traefik.http.middlewares.css-mime-type.headers.customResponseHeaders.Content-Type=text/css"
+
+  # Nota: Serviço de inicialização do banco de dados foi removido
+  # porque o banco já está inicializado
+
+# Não são necessários volumes para PostgreSQL e Redis, pois estão instalados diretamente na VPS
+
+networks:
+  SpeedFunnelsNet:
+    external: true

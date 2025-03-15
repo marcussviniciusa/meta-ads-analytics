@@ -18,7 +18,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // API base URL para garantir que as requisições vão para o backend correto
-const API_BASE_URL = 'https://apispeed.marcussviniciusa.cloud';
+const API_BASE_URL = process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace('/api', '') : 'https://api.speedfunnels.online';
 
 // Função para obter o token JWT do localStorage
 const getAuthToken = () => {
