@@ -18,7 +18,7 @@ COPY .env* ./
 
 # A variável de ambiente será obtida do arquivo .env.production
 ARG REACT_APP_API_URL
-ENV REACT_APP_API_URL=${REACT_APP_API_URL:-https://api.speedfunnels.marcussviniciusa.cloud/api}
+ENV REACT_APP_API_URL=${REACT_APP_API_URL:-https://apispeed.marcussviniciusa.cloud/api}
 
 # Executa o build da aplicação
 RUN npm run build

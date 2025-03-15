@@ -38,6 +38,8 @@ import {
 } from '@mui/icons-material';
 import UserService from '../../services/userService';
 import CompanyService from '../../services/companyService';
+import authService from '../../services/authService';
+import api from '../../services/api';
 import UserPermissions from '../../components/UserPermissions';
 
 /**
@@ -164,6 +166,7 @@ const UsersPage = () => {
   // Abrir diálogo para criar usuário
   const handleOpenCreateDialog = () => {
     setDialogMode('create');
+    // Resetar formulário e erros
     setFormData({ 
       email: '', 
       name: '', 
@@ -172,7 +175,9 @@ const UsersPage = () => {
       role: 'user',
       companyId: ''
     });
+    setErrors({});
     setOpenDialog(true);
+    console.log('Formulário de criação de usuário aberto e resetado');
   };
 
   // Abrir diálogo para editar usuário
@@ -213,22 +218,50 @@ const UsersPage = () => {
     const newErrors = {};
     let isValid = true;
     
+    console.log('Validando formulário, modo:', dialogMode);
+    console.log('Dados do formulário:', {
+      ...formData,
+      password: formData.password ? '***' : undefined,
+      confirmPassword: formData.confirmPassword ? '***' : undefined
+    });
+    
     // Validação básica
     if (!formData.name) {
       newErrors.name = 'Nome é obrigatório';
       isValid = false;
+      console.log('ERRO: Nome não informado');
     }
     
     if (!formData.email) {
       newErrors.email = 'Email é obrigatório';
       isValid = false;
+      console.log('ERRO: Email não informado');
     } else {
       // Validar email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) {
         newErrors.email = 'Email inválido';
         isValid = false;
+        console.log('ERRO: Email inválido:', formData.email);
       }
+    }
+
+    // Validar papel/role do usuário
+    if (!formData.role) {
+      newErrors.role = 'Papel do usuário é obrigatório';
+      isValid = false;
+      console.log('ERRO: Papel do usuário não informado');
+    } else {
+      console.log('Papel selecionado:', formData.role);
+    }
+    
+    // Validar empresa (pode ser opcional dependendo do papel)
+    if (formData.role === 'user' && !formData.companyId) {
+      newErrors.companyId = 'Empresa é obrigatória para usuários regulares';
+      isValid = false;
+      console.log('ERRO: Empresa não informada para usuário regular');
+    } else if (formData.companyId) {
+      console.log('Empresa selecionada:', formData.companyId);
     }
 
     // Validar senha para criação ou alteração de senha
@@ -236,21 +269,36 @@ const UsersPage = () => {
       if (!formData.password) {
         newErrors.password = 'Senha é obrigatória';
         isValid = false;
+        console.log('ERRO: Senha não informada');
       } else if (formData.password.length < 8) {
         newErrors.password = 'A senha deve ter no mínimo 8 caracteres';
         isValid = false;
+        console.log('ERRO: Senha com menos de 8 caracteres');
       }
       
-      if (formData.password !== formData.confirmPassword) {
+      // Validar confirmação de senha
+      if (!formData.confirmPassword) {
+        newErrors.confirmPassword = 'Confirmação de senha é obrigatória';
+        isValid = false;
+        console.log('ERRO: Confirmação de senha não informada');
+      } else if (formData.password !== formData.confirmPassword) {
         newErrors.confirmPassword = 'As senhas não coincidem';
         isValid = false;
+        console.log('ERRO: Senhas não coincidem', { 
+          password: formData.password ? '***' : undefined, 
+          confirmPassword: formData.confirmPassword ? '***' : undefined,
+          iguais: formData.password === formData.confirmPassword
+        });
       }
     }
 
     setErrors(newErrors);
     
     if (!isValid) {
+      console.log('Validação falhou. Erros:', newErrors);
       showSnackbar('Verifique os campos obrigatórios', 'error');
+    } else {
+      console.log('Validação bem-sucedida!');
     }
     
     return isValid;
@@ -258,7 +306,17 @@ const UsersPage = () => {
 
   // Salvar usuário
   const handleSaveUser = async () => {
-    if (!validateForm()) return;
+    console.log('Iniciando tentativa de salvar usuário...');
+    console.log('Estado atual do formulário:', {
+      ...formData,
+      password: formData.password ? '***' : undefined,
+      confirmPassword: formData.confirmPassword ? '***' : undefined
+    });
+    
+    if (!validateForm()) {
+      console.log('Validação falhou, abortando salvamento');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -266,19 +324,92 @@ const UsersPage = () => {
         email: formData.email,
         name: formData.name,
         role: formData.role,
-        companyId: formData.companyId || null
+        companyId: formData.companyId ? parseInt(formData.companyId, 10) : null
       };
 
       // Adiciona senha apenas quando necessário
       if (dialogMode === 'create' || dialogMode === 'password') {
         userData.password = formData.password;
       }
+      
+      // Validação extra para garantir que role está definido
+      if (!userData.role && dialogMode === 'create') {
+        console.warn('ALERTA: Papel não definido. Definindo papel padrão como "user"');
+        userData.role = 'user';
+      }
+      
+      // Validação extra para companyId
+      if (userData.role === 'user' && !userData.companyId && dialogMode === 'create') {
+        console.error('ERRO CRÍTICO: Empresa não definida para usuário regular!');
+        throw new Error('Empresa é obrigatória para usuários regulares');
+      }
+      
+      // Log para diagnóstico - omitindo senha
+      console.log('Dados de usuário preparados:', { 
+        ...userData, 
+        password: userData.password ? '***' : undefined,
+        role_type: typeof userData.role,
+        companyId_type: typeof userData.companyId
+      });
 
       console.log(`Enviando dados do usuário (${dialogMode}):`, {...userData, password: userData.password ? '***' : undefined});
 
       if (dialogMode === 'create') {
-        await UserService.createUser(userData);
-        showSnackbar('Usuário criado com sucesso!');
+        console.log('Iniciando processo de criação de usuário...');
+        try {
+          // Obter o usuário logado para ver se tem permissão adequada
+          const currentUser = JSON.parse(localStorage.getItem('user'));
+          if (!currentUser || !currentUser.email) {
+            throw new Error('Dados de usuário não encontrados. Faça login novamente.');
+          }
+          
+          console.log('Verificando permissões:', {
+            userRole: currentUser.role,
+            isSuperAdmin: currentUser.role === 'super_admin',
+            isAdmin: currentUser.role === 'admin'
+          });
+          
+          // Usamos o token atual do usuário para a solicitação
+          console.log('Usando token atual do usuário para criar novo usuário...');
+          // Verificar se temos um token válido
+          const token = localStorage.getItem('token');
+          if (!token) {
+            console.error('Token não encontrado');
+            throw new Error('Sessão expirada. Faça login novamente.');
+          }
+          
+          // Ajustar os dados do usuário: garantir que o papel seja enviado corretamente
+          // O backend verificará se usuário logado é super_admin para permitir definir roles
+          console.log('Dados finais para criação de usuário:', {
+            ...userData,
+            password: userData.password ? '***' : undefined
+          });
+          
+          // Garantir que a role (papel) está definida corretamente
+          if (!userData.role) {
+            userData.role = 'user'; // valor padrão
+            console.log('Definindo papel padrão como "user"');
+          }
+          
+          // Log detalhado dos dados que serão enviados
+          console.log('Dados completos para API:', Object.keys(userData).map(key => {
+            return `${key}: ${key === 'password' ? '***' : userData[key]}`;
+          }));
+          
+          // Agora tenta criar o usuário com o token renovado
+          const response = await api.post('/auth/register', userData);
+          console.log('Resposta da criação de usuário:', response);
+          showSnackbar('Usuário criado com sucesso!');
+        } catch (createError) {
+          console.error('Erro específico na criação de usuário:', createError);
+          // Exibir detalhes mais específicos do erro
+          console.error('Detalhes do erro:', {
+            status: createError.response?.status,
+            message: createError.response?.data?.message || createError.message,
+            data: createError.response?.data
+          });
+          throw createError; // Re-throw para ser tratado no catch externo
+        }
       } else if (dialogMode === 'edit') {
         await UserService.updateUser(selectedUser.id, userData);
         showSnackbar('Usuário atualizado com sucesso!');
@@ -296,15 +427,34 @@ const UsersPage = () => {
       }, 500);
     } catch (err) {
       console.error('Erro ao salvar usuário:', err);
-      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Erro desconhecido';
-      console.error('Detalhes do erro:', errorMessage);
       
-      showSnackbar(
-        `Erro ao ${
-          dialogMode === 'create' ? 'criar' : dialogMode === 'edit' ? 'atualizar' : 'alterar senha do'
-        } usuário. ${errorMessage}`,
-        'error'
-      );
+      // Log mais detalhado do erro
+      console.error('Detalhes completos do erro:', {
+        message: err.message,
+        response: err.response ? {
+          status: err.response.status,
+          statusText: err.response.statusText,
+          data: err.response.data
+        } : 'Sem resposta',
+        request: err.request ? 'Requisição enviada sem resposta' : 'Sem requisição'
+      });
+      
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || err.message || 'Erro desconhecido';
+      console.error('Mensagem de erro:', errorMessage);
+      
+      // Exibir mensagem adequada para o usuário
+      if (errorMessage.includes('obrigatório') || err.response?.status === 400) {
+        showSnackbar(`Erro ao criar usuário: Verifique se todos os campos obrigatórios estão preenchidos`, 'error');
+      } else if (err.response?.status === 401) {
+        showSnackbar('Erro de autenticação. Tente fazer login novamente.', 'error');
+      } else {
+        showSnackbar(
+          `Erro ao ${
+            dialogMode === 'create' ? 'criar' : dialogMode === 'edit' ? 'atualizar' : 'alterar senha do'
+          } usuário. ${errorMessage}`,
+          'error'
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -516,6 +666,20 @@ const UsersPage = () => {
                 helperText={errors.password || (dialogMode === 'edit' ? 'Deixe em branco para manter a senha atual' : '')}
               />
             </Grid>
+            {dialogMode === 'create' && (
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Confirmar Senha"
+                  type="password"
+                  fullWidth
+                  value={formData.confirmPassword || ''}
+                  onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  error={!!errors.confirmPassword}
+                  helperText={errors.confirmPassword}
+                  required
+                />
+              </Grid>
+            )}
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Papel</InputLabel>

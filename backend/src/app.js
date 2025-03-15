@@ -86,6 +86,7 @@ const allowedOrigins = [
   'https://www.speedfunnels.marcussviniciusa.cloud',
   'https://api.speedfunnels.marcussviniciusa.cloud',
   'https://apispeedfunnels.marcussviniciusa.cloud',
+  'https://apispeed.marcussviniciusa.cloud',
   'http://localhost:3000',
   'http://localhost:8080'
 ];

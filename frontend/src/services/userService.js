@@ -38,7 +38,47 @@ class UserService {
    * @returns {Promise} - Promise com os dados do usuário criado
    */
   static async createUser(userData) {
-    return api.post('/auth/register', userData);
+    // Verifica token atual (deve ter sido atualizado pelo login manual na tela de usuários)
+    const token = localStorage.getItem('token');
+    
+    console.log('[UserService] Verificando token para criação de usuário:', token ? `${token.substring(0, 15)}...` : 'Nenhum');
+    
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado. Faça login novamente.');
+    }
+    
+    try {
+      // Envia requisição diretamente com o token atual (renovado pelo login manual)
+      console.log('[UserService] Enviando dados para criação de usuário:', { ...userData, password: '***' });
+      
+      // Adiciona log especial para debugging da criação de usuários
+      console.log('[UserService] Headers da requisição:', {
+        Authorization: `Bearer ${token.substring(0, 10)}...`
+      });
+      
+      const response = await api.post('/auth/register', userData);
+      console.log('[UserService] Resposta bem-sucedida da criação de usuário:', response.data);
+      return response;
+    } catch (error) {
+      console.error('[UserService] Erro na requisição de criação de usuário:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
+      
+      // Mensagens de erro mais específicas de acordo com o problema
+      if (error.response?.status === 401) {
+        throw new Error('Erro de autenticação ao criar usuário. Por favor, faça login novamente.');
+      } else if (error.response?.status === 400) {
+        const errorMsg = error.response.data.message || error.response.data.error || 'Dados inválidos';
+        throw new Error(`Erro ao criar usuário: ${errorMsg}`);
+      } else if (error.response?.status === 409) {
+        throw new Error('Usuário com este email já existe no sistema.');
+      }
+      
+      throw error;
+    }
   }
 
   /**

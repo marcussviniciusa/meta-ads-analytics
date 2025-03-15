@@ -18,7 +18,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 // API base URL para garantir que as requisições vão para o backend correto
-const API_BASE_URL = 'https://api.speedfunnels.marcussviniciusa.cloud';
+const API_BASE_URL = 'https://apispeed.marcussviniciusa.cloud';
 
 // Função para obter o token JWT do localStorage
 const getAuthToken = () => {
@@ -52,6 +52,23 @@ const TabPanel = (props) => {
   );
 };
 
+// Componente para o botão de atualização
+const RefreshButton = ({ onClick, disabled, label }) => {
+  return (
+    <Button 
+      variant="outlined" 
+      color="primary" 
+      onClick={onClick} 
+      disabled={disabled}
+      startIcon={<CircularProgress size={16} sx={{ display: disabled ? 'inline-flex' : 'none' }} />}
+      size="small"
+      sx={{ ml: 1 }}
+    >
+      {label}
+    </Button>
+  );
+};
+
 const UserPermissions = ({ userId, username }) => {
   const [tabValue, setTabValue] = useState(0);
   const [metaAccounts, setMetaAccounts] = useState([]);
@@ -66,8 +83,8 @@ const UserPermissions = ({ userId, username }) => {
   const fetchMetaAccounts = async () => {
     try {
       console.log('Buscando contas Meta...');
-      // Usar URL completa com base URL e incluir headers de autenticação
-      const response = await axios.get(`${API_BASE_URL}/api/ad-accounts`, getAuthHeaders());
+      // Atualizar o endpoint para o correto e incluir parâmetro de atualização forçada
+      const response = await axios.get(`${API_BASE_URL}/api/integrations/meta-ads/accounts?forceRefresh=true`, getAuthHeaders());
       console.log('Resposta da API Meta:', response.data);
       
       // Registrar headers da resposta para debug
@@ -96,6 +113,21 @@ const UserPermissions = ({ userId, username }) => {
       
       // Para outros erros, retornar array vazio mas não lançar exceção
       return [];
+    }
+  };
+  
+  // Função para atualizar manualmente as contas Meta
+  const refreshMetaAccounts = async () => {
+    try {
+      setLoading(true);
+      const accounts = await fetchMetaAccounts();
+      setMetaAccounts(accounts);
+      toast.success('Contas do Meta atualizadas com sucesso!');
+    } catch (error) {
+      console.error('Erro ao atualizar contas Meta:', error);
+      toast.error('Erro ao atualizar contas do Meta');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -308,6 +340,20 @@ const UserPermissions = ({ userId, username }) => {
       
       {/* Tab de Contas Meta Ads */}
       <TabPanel value={tabValue} index={0}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="subtitle1">Contas de anúncio disponíveis</Typography>
+          <Button 
+            variant="outlined" 
+            color="primary" 
+            onClick={refreshMetaAccounts} 
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={16} /> : null}
+            size="small"
+          >
+            Atualizar Contas Meta
+          </Button>
+        </Box>
+        
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
             <CircularProgress />

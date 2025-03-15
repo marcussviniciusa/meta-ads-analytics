@@ -61,7 +61,9 @@ const authService = {
    * @returns {string|null} Token JWT ou null se não estiver autenticado
    */
   getToken: () => {
-    return localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    console.log('Token recuperado do localStorage:', token ? `${token.substring(0, 10)}...` : 'null');
+    return token;
   },
 
   /**
@@ -85,6 +87,48 @@ const authService = {
    */
   isAuthenticated: () => {
     return !!localStorage.getItem('token');
+  },
+  
+  /**
+   * Forçar uma autenticação com credenciais existentes para renovar o token
+   * Útil para garantir que o token seja válido antes de operações administrativas
+   * @returns {Promise<object>} Dados de autenticação atualizados
+   */
+  refreshAuthentication: async () => {
+    try {
+      console.log('Tentando renovar autenticação para garantir token válido');
+      
+      // Recuperar credenciais salvas, se disponíveis
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        throw new Error('Nenhum usuário encontrado para renovar a autenticação');
+      }
+      
+      const user = JSON.parse(userStr);
+      const email = user.email;
+      
+      // Solicitar senha ao usuário ou usar uma armazenada temporariamente (não recomendado em produção)
+      // Para fins de teste, usaremos a senha do administrador padrão
+      const credentials = {
+        email: email,
+        password: 'admin123' // APENAS PARA TESTE - em produção isso seria solicitado ao usuário
+      };
+      
+      // Fazer login novamente para obter um token fresco
+      const response = await api.post('/auth/login', credentials);
+      
+      if (response.data.token) {
+        console.log('Token renovado com sucesso!');
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return response.data;
+      } else {
+        throw new Error('Falha ao renovar token - resposta sem token');
+      }
+    } catch (error) {
+      console.error('Erro ao renovar autenticação:', error);
+      throw error;
+    }
   },
 
   /**

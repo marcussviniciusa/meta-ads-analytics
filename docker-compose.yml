@@ -62,9 +62,9 @@ services:
     container_name: meta-ads-postgres
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-metaads}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-securepassword}
-      POSTGRES_DB: ${POSTGRES_DB:-metaadsreports}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-speedfunnels}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
@@ -95,7 +95,7 @@ services:
       - redis
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-metaads}:${POSTGRES_PASSWORD:-securepassword}@postgres:5432/${POSTGRES_DB:-metaadsreports}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-speedfunnels}
       REDIS_URL: redis://:${REDIS_PASSWORD:-securepassword}@redis:6379
       META_APP_ID: ${META_APP_ID}
       META_APP_SECRET: ${META_APP_SECRET}

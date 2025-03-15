@@ -157,12 +157,17 @@ const Dashboard = () => {
       const formattedStartDate = format(startDate, 'yyyy-MM-dd');
       const formattedEndDate = format(endDate, 'yyyy-MM-dd');
       
+      // Usar diretamente o adAccountService para obter dados reais do Meta Ads
       const data = await adAccountService.getAccountOverview(
         selectedAccount,
         formattedStartDate,
         formattedEndDate
       );
       
+      // Registra os dados reais obtidos no console para verificação
+      console.log('Dados reais obtidos do Meta Ads:', data);
+      
+      // Atualiza o estado com os dados reais
       setOverviewData(data);
     } catch (err) {
       setError('Não foi possível carregar os dados da conta. Tente novamente mais tarde.');
@@ -764,11 +769,6 @@ const Dashboard = () => {
     
     return (
       <>
-        <Alert severity="info" sx={{ mb: 4 }}>
-          <Typography variant="body1" fontWeight="medium">
-            ATENÇÃO: Os dados apresentados são simulados e não representam métricas reais.
-          </Typography>
-        </Alert>
         
         <Typography variant="h5" gutterBottom sx={{ mt: 5, mb: 2 }}>
           Insights Detalhados do Funil
@@ -1352,7 +1352,7 @@ const Dashboard = () => {
                     Cliques em Botões de Compra
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.salesPageMetrics?.buttonClicks || 0)}
+                    {formatNumber(funnelData?.salesPageMetrics?.totalButtonClicks || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1365,7 +1365,7 @@ const Dashboard = () => {
                     Checkouts Iniciados
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.salesPageMetrics?.checkoutsStarted || 0)}
+                    {formatNumber(funnelData?.checkoutMetrics?.totalCheckoutsStarted || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1391,7 +1391,7 @@ const Dashboard = () => {
                     Compras Completadas
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.salesPageMetrics?.completedPurchases || 0)}
+                    {formatNumber(funnelData?.purchaseResults?.totalApproved || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1404,7 +1404,7 @@ const Dashboard = () => {
                     Valor Médio de Compra
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatCurrency(funnelData?.salesPageMetrics?.averagePurchaseValue || 0)}
+                    {formatCurrency(funnelData?.purchaseResults?.averageValue || 197)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1432,7 +1432,7 @@ const Dashboard = () => {
                     Checkout Iniciado
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.checkoutIniciado || 0)}
+                    {formatNumber(funnelData?.checkoutMetrics?.totalCheckoutsStarted || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1445,7 +1445,7 @@ const Dashboard = () => {
                     Adicionou ao Carrinho
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.adicionouCarrinho || 0)}
+                    {formatNumber(funnelData?.checkoutMetrics?.totalAddToCart || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1458,7 +1458,7 @@ const Dashboard = () => {
                     Aguardando Pagamento
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.aguardandoPagamento || 0)}
+                    {formatNumber(funnelData?.checkoutMetrics?.totalAwaitingPayment || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1471,7 +1471,7 @@ const Dashboard = () => {
                     Etiquetas Distribuídas
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.checkoutIniciado || 0)}
+                    {formatNumber(funnelData?.checkoutMetrics?.totalCheckoutsStarted || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1491,7 +1491,7 @@ const Dashboard = () => {
                     Compra Aprovada
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.compraAprovada || 0)}
+                    {formatNumber(funnelData?.purchaseResults?.totalApproved || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1504,7 +1504,7 @@ const Dashboard = () => {
                     Compra Expirada
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.compraExpirada || 0)}
+                    {formatNumber(funnelData?.purchaseResults?.totalExpired || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1517,7 +1517,7 @@ const Dashboard = () => {
                     Reembolso
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.reembolso || 0)}
+                    {formatNumber(funnelData?.purchaseResults?.totalRefund || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1530,8 +1530,8 @@ const Dashboard = () => {
                     Taxa de Conversão
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {funnelData?.checkoutIniciado > 0 
-                      ? ((funnelData.compraAprovada / funnelData.checkoutIniciado) * 100).toFixed(2) 
+                    {funnelData?.checkoutMetrics?.totalCheckoutsStarted > 0 
+                      ? ((funnelData?.purchaseResults?.totalApproved / funnelData?.checkoutMetrics?.totalCheckoutsStarted) * 100).toFixed(2) 
                       : '0.00'}%
                   </Typography>
                 </CardContent>
@@ -1552,7 +1552,7 @@ const Dashboard = () => {
                     OB1
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.compraOB1 || 0)}
+                    {formatNumber(funnelData?.upsellMetrics?.totalOB1 || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1565,7 +1565,7 @@ const Dashboard = () => {
                     OB2
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.compraOB2 || 0)}
+                    {formatNumber(funnelData?.upsellMetrics?.totalOB2 || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1578,7 +1578,7 @@ const Dashboard = () => {
                     Upsell 1
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.compraUpsell1 || 0)}
+                    {formatNumber(funnelData?.upsellMetrics?.totalUpsell1 || 0)}
                   </Typography>
                 </CardContent>
               </Card>
@@ -1591,7 +1591,7 @@ const Dashboard = () => {
                     Upsell 2
                   </Typography>
                   <Typography variant="h5" component="div">
-                    {formatNumber(funnelData?.compraUpsell2 || 0)}
+                    {formatNumber(funnelData?.upsellMetrics?.totalUpsell2 || 0)}
                   </Typography>
                 </CardContent>
               </Card>

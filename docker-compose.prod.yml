@@ -13,8 +13,8 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Marcus1911!!Marcus}
-      POSTGRES_DB: ${POSTGRES_DB:-speedfunnels_v2}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-speedfunnels}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
@@ -46,8 +46,8 @@ services:
     environment:
       NODE_ENV: production
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Marcus1911!!Marcus}
-      POSTGRES_DB: ${POSTGRES_DB:-speedfunnels_v2}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-speedfunnels}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       REDIS_PASSWORD: ${REDIS_PASSWORD:-Marcus1911Marcus}

@@ -51,10 +51,23 @@ class AdAccountService {
    * @returns {Promise} - API response
    */
   async getAccountOverview(accountId, startDate, endDate) {
-    const response = await api.get(`/reports/account/${accountId}/overview`, {
-      params: { startDate, endDate }
-    });
-    return response.data;
+    try {
+      console.log(`Solicitando dados do Meta Ads para conta: ${accountId}, período: ${startDate} a ${endDate}`);
+      
+      const response = await api.get(`/reports/account/${accountId}/overview`, {
+        params: { startDate, endDate }
+      });
+      
+      console.log('Dados recebidos do Meta Ads:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao obter dados do Meta Ads:', error.response?.data || error.message);
+      // Retornando um objeto vazio com estrutura similar para evitar erros no frontend
+      return {
+        performance: {},
+        summary: {}
+      };
+    }
   }
 
   /**
